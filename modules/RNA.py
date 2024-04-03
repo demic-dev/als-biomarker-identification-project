@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as et
+import matplotlib.pyplot as plt
 import pandas as pd
 import re
 
@@ -27,6 +28,8 @@ class RNASeq:
         get_genes_counts(): Returns the DataFrame containing gene counts data.
         get_sample_annotations(): Returns the DataFrame containing sample annotations.
     """
+    #region Default Methods
+
     def __init__(self, verbose: bool = False) -> None:
         """
         Initializes RNASeq class.
@@ -41,7 +44,42 @@ class RNASeq:
 
         self.__verbose = verbose
         return
+    
+    def __str__(self) -> str:
+        return str(self.length)
+
+    #endregion
+
+    #region Setters and Getters
+    
+    def toggle_verbose(self) -> None:
+        self.__verbose = not self.__verbose
         
+    def get_verbose(self) -> bool:
+        return self.__verbose
+    
+    def get_genes_counts(self) -> pd.DataFrame:
+        """
+        Returns the DataFrame containing gene counts data.
+
+        Returns:
+            DataFrame: Gene counts data.
+        """
+        return self.__genes_counts
+    
+    def get_sample_annotations(self) -> pd.DataFrame:
+        """
+        Returns the DataFrame containing sample annotations.
+
+        Returns:
+            DataFrame: Sample annotations.
+        """
+        return self.__sample_annotations
+    
+    #endregion
+    
+    #region Importing and utils
+    
     def parse_file(self, filename: str) -> pd.DataFrame:
         """
         Parses a data file and returns a DataFrame.
@@ -115,7 +153,7 @@ class RNASeq:
         xroot = xtree.getroot()
         
         errors = 0
-        
+
         for child in xroot.iter("{http://www.ncbi.nlm.nih.gov/geo/info/MINiML}Sample"):
             try:
                 temp_sample_id = child.attrib['iid']
@@ -130,59 +168,23 @@ class RNASeq:
                 errors += 1
             
         if self.__verbose:
-            print(f"Annotations loaded. Action accomplished with {errors} inside {len(xroot.iter("{http://www.ncbi.nlm.nih.gov/geo/info/MINiML}Sample"))} files.")
-            
-    def toggle_verbose(self) -> None:
-        self.__verbose = not self.__verbose
-        
-    def get_verbose(self) -> bool:
-        return self.__verbose
- 
-    def __str__(self) -> str:
-        return str(self.length)
-        
-    def get_std_genes(self) -> pd.DataFrame:
-        """
-        Calculates standard deviation of gene counts across samples.
+            print(f"Annotations loaded. Action accomplished with {errors} inside {len(xroot)} files.")
 
-        Returns:
-            Series: Standard deviation of gene counts.
-        """
-        return self.__genes_counts.std(axis=1)
+    #endregion
     
-    def get_median_genes(self) -> pd.DataFrame:
-        """
-        Calculates median of gene counts across samples.
+    #region Statistical Analysis
 
-        Returns:
-            Series: Median of gene counts.
-        """
-        return self.__genes_counts.median(axis=1)
+    def get_std_hist(self) -> plt.Axes:
+        return self.__genes_counts.std(axis=1).plot.hist()
     
-    def get_mean_genes(self) -> pd.DataFrame:
-        """
-        Calculates mean of gene counts across samples.
-
-        Returns:
-            Series: Mean of gene counts.
-        """
-        return self.__genes_counts.mean(axis=1)
+    def get_median_hist(self) -> plt.Axes:
+        return self.__genes_counts.median(axis=1).plot.hist()
     
-    def get_genes_counts(self) -> pd.DataFrame:
-        """
-        Returns the DataFrame containing gene counts data.
-
-        Returns:
-            DataFrame: Gene counts data.
-        """
-        return self.__genes_counts
+    def get_mean_hist(self) -> plt.Axes:
+        return self.__genes_counts.mean(axis=1).plot.hist()
     
-    def get_sample_annotations(self) -> pd.DataFrame:
-        """
-        Returns the DataFrame containing sample annotations.
+    def get_sample_distribution_by_column(self, column: str) -> plt.Axes:
+        return self.__sample_annotations[column].value_counts().plot(kind='bar', rot=45)
 
-        Returns:
-            DataFrame: Sample annotations.
-        """
-        return self.__sample_annotations
-            
+    #endregion
+    
