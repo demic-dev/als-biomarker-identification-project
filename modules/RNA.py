@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as et
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 import re
 
 # Here, I can create methods that give mean, std and median about the genes.
@@ -28,6 +29,7 @@ class RNASeq:
         get_genes_counts(): Returns the DataFrame containing gene counts data.
         get_sample_annotations(): Returns the DataFrame containing sample annotations.
     """
+
     #region Default Methods
 
     def __init__(self, verbose: bool = False) -> None:
@@ -39,6 +41,8 @@ class RNASeq:
         """
         self.__genes_counts = pd.DataFrame()
         self.__sample_annotations = pd.DataFrame(columns = ["id", "cns subregion", "tissue type", "sample group"])
+        
+        self.__index_label = "sequencing"
 
         self.length = 0
 
@@ -99,31 +103,14 @@ class RNASeq:
             return df
         except:
             return None
-        
-    def load_single_data(self, filename: str) -> None:
-        """
-        Loads gene counts data from a single file.
-
-        Args:
-            filename (str): Path to the data file.
-        """
-        new_dataframe = self.parse_file(filename)
-        new_dataframe = new_dataframe.transpose()
-        self.__genes_counts = pd.concat([self.__genes_counts, new_dataframe], axis=1)
-        self.length += 1
-        
-        if self.__verbose:
-            if new_dataframe is None:
-                print("Couldn't load the file. There have been errors.")
-            else:
-                print("File loaded.")
             
-    def load_bulk_data(self, filenames: list[str]) -> None:
+    def load_bulk_data(self, filenames: list[str], overwrite = True) -> None:
         """
         Loads gene counts data from multiple files.
 
         Args:
             filenames (list): List of paths to data files.
+            overwrite (bool): The current function overwrite data in the dataframe.
         """
         data = []
         errors = 0
@@ -133,21 +120,28 @@ class RNASeq:
                 errors += 1
             else:
                 data.append(df)
-            
+
         temp_df = pd.concat(data, axis=1)
         temp_df = temp_df.transpose()
-        self.__genes_counts = pd.concat([self.__genes_counts, temp_df], axis=1)
-        self.length += (len(filenames) - errors)
+        print(temp_df.columns[0])
+        if overwrite:
+            self.__genes_counts = temp_df
+            self.length = len(filenames) - errors
+        else:
+            self.__genes_counts = pd.concat([self.__genes_counts, temp_df], axis=0)
+            self.length += (len(filenames) - errors)
+    
 
         if self.__verbose:
             print(f"Files loaded. Action accomplished with {errors} inside {len(filenames)} files.")
 
-    def load_annotations(self, file: str) -> None:
+    def load_annotations(self, file: str, overwrite = True) -> None:
         """
         Loads sample annotations from the XML file.
 
         Args:
             file (str): Path to the XML file containing sample annotations.
+            overwrite (bool): The current function overwrite data in the dataframe.
         """
         xtree = et.parse(file)
         xroot = xtree.getroot()
@@ -163,16 +157,53 @@ class RNASeq:
                     if(child2.attrib["tag"] in self.__sample_annotations.columns):
                         tags_map[child2.attrib["tag"]] = child2.text.strip()
                 temp_df = pd.DataFrame({'id': [temp_sample_id], **tags_map})
-                self.__sample_annotations = pd.concat([self.__sample_annotations, temp_df], axis=0)
+                if overwrite:
+                    self.__sample_annotations = temp_df
+                else:
+                    self.__sample_annotations = pd.concat([self.__sample_annotations, temp_df], axis=0)
             except:
                 errors += 1
             
         if self.__verbose:
             print(f"Annotations loaded. Action accomplished with {errors} inside {len(xroot)} files.")
 
+    def save_csv (self, filename: str) -> None:
+        ''' 
+        Save the dataframe __genes_counts to a CSV file.
+        Args:
+            filename (str): Path to the file where the dataframe will be saved.
+        '''
+
+        self.__genes_counts.to_csv(filename, index_label=self.__index_label)
+        return
+
+    def load_csv (self, filename: str) -> None:
+        ''' 
+        Load the dataframe __genes_counts from a CSV file.
+        Args:
+            filename (str): Path to the file where the dataframe will be loaded from.
+        '''
+
+        df = pd.read_csv(filename)
+        df.rename(index=df[self.__index_label], inplace=True)
+        df.drop(columns=self.__index_label, axis = 1, inplace= True)
+        self.__genes_counts = df
+        return
+    
     #endregion
     
     #region Statistical Analysis
+
+    #region Sample Description
+    
+    def get_sample_distribution_by_column(self, column: str) -> plt.Axes:
+        return self.__sample_annotations[column].value_counts().plot(kind='bar', rot=45)
+    
+    #endregion
+    
+    #region RNA Counts
+    
+    #endregion
 
     def get_std_hist(self) -> plt.Axes:
         return self.__genes_counts.std(axis=1).plot.hist()
@@ -183,8 +214,95 @@ class RNASeq:
     def get_mean_hist(self) -> plt.Axes:
         return self.__genes_counts.mean(axis=1).plot.hist()
     
-    def get_sample_distribution_by_column(self, column: str) -> plt.Axes:
-        return self.__sample_annotations[column].value_counts().plot(kind='bar', rot=45)
+    def get_std(self) -> None:
+        self.std_dev = self.__genes_counts.std()
 
-    #endregion
+        # Plot standard deviation
+        plt.figure(figsize=(12, 6))
+
+        plt.plot(self.std_dev, label='Standard Deviation')
+
+        plt.legend(loc='best')
+        plt.title('Standard Deviation of Each Gene')
+        plt.xlabel('Gene')
+        plt.ylabel('Value')
+
+        plt.show()
+        return
     
+    def get_median(self) -> None:
+        self.median = self.__genes_counts.median()
+
+        # Plot median
+        plt.figure(figsize=(12, 6))
+
+        plt.plot(self.median, label='Median')
+
+        plt.legend(loc='best')
+        plt.title('Median of Each Gene')
+        plt.xlabel('Gene')
+        plt.ylabel('Value')
+
+        plt.show()
+        return
+    
+    def get_mean(self) -> None:
+        # Plot mean
+        self.mean = self.__genes_counts.mean()
+        plt.figure(figsize=(12, 6))
+
+        plt.plot(self.mean, label='Mean')
+
+        plt.legend(loc='best')
+        plt.title('Mean of Each Gene')
+        plt.xlabel('Gene')
+        plt.ylabel('Value')
+
+        plt.show()
+        return
+        
+    def get_mean_median_std(self) -> None:
+        '''
+        This method plots the mean, median and standard deviation of each gene and shows the plot.
+        '''
+        # mean = self.__genes_counts.mean()
+        # median = self.__genes_counts.median()
+        # std_dev = self.__genes_counts.std()
+
+        # Plot mean, median, and standard deviation
+        plt.figure(figsize=(12, 6))
+
+        plt.plot(self.mean, label='Mean')
+        plt.plot(self.median, label='Median')
+        plt.plot(self.std_dev, label='Standard Deviation')
+
+        plt.legend(loc='best')
+        plt.title('Mean, Median, and Standard Deviation of Each Gene')
+        plt.xlabel('Gene')
+        plt.ylabel('Value')
+
+        plt.show()
+        return
+
+    def log_transformation(self) -> pd.DataFrame:
+        # Apply log transformation
+        log_genes_counts = np.log1p(self.__genes_counts)
+
+        mean = log_genes_counts.mean()
+        median = log_genes_counts.median()
+        std_dev = log_genes_counts.std()
+
+        # Plot mean, median, and standard deviation
+        plt.figure(figsize=(12, 6))
+
+        plt.plot(mean, label='Mean')
+        plt.plot(median, label='Median')
+        plt.plot(std_dev, label='Standard Deviation')
+
+        plt.legend(loc='best')
+        plt.title('Mean, Median, and Standard Deviation of Each Gene (Log Transformed)')
+        plt.xlabel('Gene')
+        plt.ylabel('Value')
+
+        plt.show()
+        return log_genes_counts
