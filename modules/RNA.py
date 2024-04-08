@@ -1,13 +1,8 @@
 import xml.etree.ElementTree as et
-import matplotlib.pyplot as plt
-import pandas as pd
+import matplotlib.pyplot as plt # type: ignore
+import pandas as pd # type: ignore
 import numpy as np
 import re
-
-# Here, I can create methods that give mean, std and median about the genes.
-# I can also create a method called concat where, given more RNASeq instances
-# I can return a new one (I create multiple instances of RNASeq (all the files)
-# and then concatenate them together to show the difference???)
 class RNASeq:
     """
     RNASeq class for processing RNA sequencing data.
@@ -40,7 +35,7 @@ class RNASeq:
             verbose (bool, optional): If True, enables verbose mode. Defaults to False.
         """
         self.__genes_counts = pd.DataFrame()
-        self.__sample_annotations = pd.DataFrame(columns = ["id", "cns subregion", "tissue type", "sample group"])
+        self.__sample_annotations = pd.DataFrame(columns = ["id","cns subregion", "tissue type", "sample group"])
         
         self.__index_label = "sequencing"
 
@@ -148,6 +143,7 @@ class RNASeq:
         
         errors = 0
 
+        temp_df = pd.DataFrame(columns = ["id","cns subregion", "tissue type", "sample group"])
         for child in xroot.iter("{http://www.ncbi.nlm.nih.gov/geo/info/MINiML}Sample"):
             try:
                 temp_sample_id = child.attrib['iid']
@@ -156,16 +152,18 @@ class RNASeq:
                 for child2 in child.iter("{http://www.ncbi.nlm.nih.gov/geo/info/MINiML}Characteristics"):
                     if(child2.attrib["tag"] in self.__sample_annotations.columns):
                         tags_map[child2.attrib["tag"]] = child2.text.strip()
-                temp_df = pd.DataFrame({'id': [temp_sample_id], **tags_map})
-                if overwrite:
-                    self.__sample_annotations = temp_df
-                else:
-                    self.__sample_annotations = pd.concat([self.__sample_annotations, temp_df], axis=0)
+                temp_df = pd.concat([temp_df, pd.DataFrame({'id': [temp_sample_id], **tags_map})])
             except:
                 errors += 1
+
+        temp_df.set_index(keys='id', drop=True, inplace=True)
+        if overwrite:
+            self.__sample_annotations = temp_df
+        else:
+            self.__sample_annotations = pd.concat([self.__sample_annotations, temp_df], axis=0)
             
         if self.__verbose:
-            print(f"Annotations loaded. Action accomplished with {errors} inside {len(xroot)} files.")
+            print(f"Annotations loaded. Action accomplished with {errors} errors inside {len(xroot)} files.")
 
     def save_csv (self, filename: str) -> None:
         ''' 
@@ -193,6 +191,33 @@ class RNASeq:
     #endregion
     
     #region Statistical Analysis
+    
+    def get_descriptive_statistics(self, by_gene: bool = True) -> pd.DataFrame:
+        """
+            If it's calculating desc statistics by gene, I do the logarithm transformation.
+        """
+        res = pd.DataFrame(columns = ["mean", "median", "std"])
+        
+        axis = 0
+        if not by_gene:
+            axis = 1
+
+        res['mean'] = self.__genes_counts.mean(axis=axis)
+        res['median'] = self.__genes_counts.median(axis=axis)
+        res['std'] = self.__genes_counts.std(axis=axis)
+        
+        if by_gene:
+            res['mean'] = np.log1p(res['mean'])
+            res['median'] = np.log1p(res['median'])
+            res['std'] = np.log1p(res['std'])
+
+        return res
+
+    def apply_log_transformation(self) -> pd.DataFrame:
+        
+        return
+
+    #endregion
 
     #region Sample Description
     
