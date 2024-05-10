@@ -1,14 +1,30 @@
 import re
 import numpy as np
 import pandas as pd  # type: ignore
+from sklearn.decomposition import PCA # type: ignore
+from sklearn.preprocessing import StandardScaler # type: ignore
+from sklearn.manifold import TSNE # type: ignore
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+
+
 
 class Samples:
     def __init__(self, verbose: bool = True, output_path: str = "outputs/genes_samples.csv") -> None:
         self.__genes_samples = pd.DataFrame()
         
+        self.__stats = None
+
+        self.__reduced_samples = pd.DataFrame()
+        self.__reduced_genes = pd.DataFrame()
+        
+        self.__reduced_samples_tSNE = pd.DataFrame()
+        self.__reduced_genes_tSNE = pd.DataFrame()
+        
         self.__index_label = "sample"
         self.__output_path = output_path
         self.__verbose = verbose
+        self.__normalized_genes = pd.DataFrame()
         return
 
     # region Imports
@@ -68,6 +84,21 @@ class Samples:
     
     def get_samples(self) -> pd.DataFrame:
         return self.__genes_samples
+    
+    def get_stats(self):
+        return self.__stats
+    
+    def get_reduced_samples(self) -> pd.DataFrame:
+        return self.__reduced_samples
+    
+    def get_reduced_genes(self) -> pd.DataFrame:
+        return self.__reduced_genes
+    
+    def get_reduced_samples_tSNE(self) -> pd.DataFrame:
+        return self.__reduced_samples_tSNE
+
+    def get_reduced_genes_tSNE(self) -> pd.DataFrame:
+        return self.__reduced_genes_tSNE
 
     def toggle_verbose(self) -> None:
         self.__verbose = not self.__verbose
@@ -75,10 +106,54 @@ class Samples:
 
     def is_verbose(self) -> bool:
         return self.__verbose
+    
+    def get_normalized_genes(self) -> pd.DataFrame:
+        return self.__normalized_genes
 
     # endregion
     
     # region Statistical Analysis
+
+    def get_basic_statistics(self) -> pd.DataFrame:
+        self.__stats = self.__genes_samples.describe()
+        return self.__stats 
+    
+    def get_mean_median_std_dev(self) -> pd.DataFrame:
+        mean = self.__stats.loc['mean']
+        median = self.__stats.loc['50%']  # Median is the 50th percentile
+        std_dev = self.__stats.loc['std']
+
+        # Create a new figure
+        plt.figure(figsize=(15, 10))
+
+        # Subplot for mean
+        plt.subplot(2, 2, 1)
+        plt.plot(mean)
+        plt.title('Mean')
+
+        # Subplot for median
+        plt.subplot(2, 2, 2)
+        plt.plot(median)
+        plt.title('Median')
+
+        # Subplot for standard deviation
+        plt.subplot(2, 2, 3)
+        plt.plot(std_dev)
+        plt.title('Standard Deviation')
+
+        # Subplot for all
+        plt.subplot(2, 2, 4)
+        plt.plot(mean, label='Mean')
+        plt.plot(median, label='Median')
+        plt.plot(std_dev, label='Standard Deviation')
+        plt.title('All Statistics')
+        plt.legend()
+
+        # Display the plots
+        plt.tight_layout()
+        plt.show()
+        
+        return
 
     def get_descriptive_statistics(self, by_gene: bool = True) -> pd.DataFrame:
         columns = ["mean", "median", "std"]
@@ -99,4 +174,62 @@ class Samples:
 
         return res
     
+    def get_normalized_genes_data(self) -> pd.DataFrame:
+
+        # Assuming df is your DataFrame
+        scaler = StandardScaler()
+        self.__normalized_genes = pd.DataFrame(scaler.fit_transform(self.__genes_samples), columns=self.__genes_samples.columns)
+        return self.__normalized_genes
     # endregion
+    
+    # region PCA
+    
+    def __center_data(self, samples: pd.DataFrame) -> StandardScaler:
+        scaler = StandardScaler()
+        return scaler.fit_transform(samples)
+    
+    def __reduce_to_2d(self, df_to_reduce: pd.DataFrame) -> pd.DataFrame:
+        pca = PCA(n_components= 2)
+
+        scaled_data = self.__center_data(df_to_reduce)
+        pca = pca.fit(scaled_data)
+        pca_data = pca.transform(scaled_data)
+
+        vars = np.round(pca.explained_variance_ratio_ * 100, decimals=1)
+        labels = [f"PC{x}" for x in range(1, len(vars) + 1)]
+
+        return pd.DataFrame(pca_data, index=df_to_reduce.index, columns = labels)
+    
+    def reduce_to_2d_per_sample(self):
+        self.__reduced_samples = self.__reduce_to_2d(self.__genes_samples)
+        return
+    
+    def reduce_to_2d_per_gene(self):
+        self.__reduced_genes =self.__reduce_to_2d(self.__genes_samples.T)
+        return
+    
+    # endregion
+    
+    # region tSNE
+    
+    def __reduce_to_2d_with_tSNE(self, df_to_reduce: pd.DataFrame):
+        scaled_data = self.__center_data(df_to_reduce)
+        reduced = TSNE(
+            n_components=2,
+            learning_rate='auto',
+            init='random',
+            perplexity=3
+        ).fit_transform(scaled_data)
+
+        return pd.DataFrame(reduced, index = df_to_reduce.index)
+        
+    def reduce_to_2d_per_sample_tSNE(self):
+        self.__reduced_samples_tSNE = self.__reduce_to_2d_with_tSNE(self.__genes_samples)
+        return
+    
+    def reduce_to_2d_per_gene_tSNE(self):
+        self.__reduced_genes_tSNE = self.__reduce_to_2d_with_tSNE(self.__genes_samples.T)
+        return
+    
+    # endregion
+
