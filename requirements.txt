@@ -1,5 +1,5 @@
-pandas
-gc
-glob
-matplotlib.pyplot
+pandas==2.2.2
+matplotlib
 numpy
+# ipykernel
+scikit-learn
