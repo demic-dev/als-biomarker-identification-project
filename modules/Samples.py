@@ -218,7 +218,7 @@ class Samples:
             n_components=2,
             learning_rate='auto',
             init='random',
-            perplexity=3
+            perplexity=20
         ).fit_transform(scaled_data)
 
         return pd.DataFrame(reduced, index = df_to_reduce.index)
