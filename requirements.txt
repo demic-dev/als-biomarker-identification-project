@@ -3,3 +3,5 @@ matplotlib
 numpy
 # ipykernel
 scikit-learn
+anndata==0.8.0
+seaborn
