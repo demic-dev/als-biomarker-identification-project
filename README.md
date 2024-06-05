@@ -1,6 +1,6 @@
 # **ALS Biomarker Identification Project**
 
-Welcome to the ALS Biomarker Identification Project repository. This project, conducted in collaboration with a partner at Paris Saclay University, aims to identify potential biomarkers associated with Amyotrophic Lateral Sclerosis (ALS) through RNA-Seq data analysis.
+Welcome to the ALS Biomarker Identification Project repository. This project, conducted in collaboration with [Aliaksei](https://github.com/aliakseibrown) at Paris Saclay University, aims to identify potential biomarkers associated with Amyotrophic Lateral Sclerosis (ALS) through RNA-Seq data analysis.
 
 ## **Objective**
 
