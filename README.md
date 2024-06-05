@@ -14,6 +14,9 @@ The primary objective is to use advanced computational techniques to identify ge
 - **Advanced Analysis Techniques**: Conducted univariate analyses and used the PyDESeq2 library to identify genes with significant expression differences.
 - **Model Tuning and Generalization**: Applied normalization and ElasticNet model tuning to accurately identify ALS-impacted genes.
 
+## **Notion Report**
+[Analysis of Amyotrophic Lateral Sclerosis RNA-Seq](https://aliakseibrown.notion.site/Analysis-of-Amyotrophic-Lateral-Sclerosis-RNA-Seq-43489d7f7f584083867c22cb695d8419?pvs=4)
+
 ## **Getting Started**
 
 To get started with this project:
@@ -39,7 +42,4 @@ We thank Paris-Saclay University for their resources and support. We also apprec
 
 ## **Sources**
 The data was provided by a research Postmortem Cortex Samples Identify Distinct Molecular Subtypes of ALS: Retrotransposon Activation, Oxidative Stress, and Activated Glia
-
-- Data set [add link]
-
 
